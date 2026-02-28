@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Weather Hub — Multi-Source Weather Comparison</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛅</text></svg>" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.2/babel.min.js"></script>
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   WEATHER HUB — Complete Styles
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  --bg-primary: #0b0f1a;
+  --bg-secondary: #111827;
+  --bg-card: #1a2235;
+  --bg-card-hover: #1f2a40;
+  --border: #2a3550;
+  --border-light: #374766;
+  --text-primary: #e8ecf4;
+  --text-secondary: #8896b0;
+  --text-muted: #5a6a85;
+  --accent-blue: #3b82f6;
+  --accent-cyan: #06b6d4;
+  --accent-amber: #f59e0b;
+  --accent-red: #ef4444;
+  --accent-green: #10b981;
+  --accent-purple: #8b5cf6;
+  --snow: #a5d8ff;
+  --rain: #4dabf7;
+  --storm: #845ef7;
+  --clear: #fcc419;
+  --cloudy: #868e96;
+  --wind: #38d9a9;
+  --fog: #adb5bd;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --shadow-card: 0 2px 12px rgba(0,0,0,0.3);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: var(--accent-blue); color: white; }
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+input, button, select { font-family: inherit; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── App Layout ─────────────────────────── */
+.app { min-height: 100vh; display: flex; flex-direction: column; }
+
+.app-header {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  padding: 20px 24px 12px;
+  display: flex; flex-direction: column; gap: 12px;
+  backdrop-filter: blur(12px);
+}
+
+.header-top { display: flex; justify-content: space-between; align-items: center; }
+
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-icon { font-size: 32px; line-height: 1; }
+.brand-title {
+  font-size: 22px; font-weight: 700; letter-spacing: -0.5px;
+  background: linear-gradient(135deg, var(--text-primary), var(--accent-cyan));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.brand-sub { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+
+.header-controls {
+  display: flex; gap: 2px;
+  background: var(--bg-card); border-radius: var(--radius-md);
+  padding: 3px; border: 1px solid var(--border);
+}
+.unit-btn {
+  padding: 5px 14px; border: none; border-radius: var(--radius-sm);
+  background: transparent; color: var(--text-secondary);
+  cursor: pointer; font-weight: 600; font-size: 13px; transition: all 0.15s;
+}
+.unit-btn.active { background: var(--accent-blue); color: white; }
+
+.app-main { flex: 1; padding: 24px; max-width: 1400px; margin: 0 auto; width: 100%; }
+.locations-grid { display: flex; flex-direction: column; gap: 20px; }
+
+.app-footer {
+  padding: 20px 24px; border-top: 1px solid var(--border); text-align: center;
+}
+.app-footer p { font-size: 12px; color: var(--text-muted); }
+.app-footer a { color: var(--accent-cyan); text-decoration: none; }
+.app-footer a:hover { text-decoration: underline; }
+
+/* ── Search Bar ─────────────────────────── */
+.search-bar { position: relative; }
+.search-input-wrap {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 0 14px; transition: border-color 0.2s;
+}
+.search-input-wrap:focus-within {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+.search-icon { color: var(--text-muted); flex-shrink: 0; }
+.search-input {
+  flex: 1; padding: 12px 0; border: none; outline: none;
+  background: none; color: var(--text-primary); font-size: 14px;
+}
+.search-input::placeholder { color: var(--text-muted); }
+.search-spinner {
+  width: 16px; height: 16px; border: 2px solid var(--border);
+  border-top-color: var(--accent-blue); border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+.search-dropdown {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-md); list-style: none;
+  max-height: 280px; overflow-y: auto; z-index: 200;
+  box-shadow: var(--shadow-card); animation: fadeIn 0.15s ease;
+}
+.search-option {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px; cursor: pointer; transition: background 0.1s;
+}
+.search-option:hover, .search-option.focused { background: var(--bg-card-hover); }
+.search-option-name { font-weight: 500; color: var(--text-primary); font-size: 14px; }
+.search-option-detail { color: var(--text-muted); font-size: 12px; }
+
+/* ── Source Toggle ──────────────────────── */
+.source-toggle { display: flex; align-items: center; gap: 10px; overflow-x: auto; }
+.source-label { font-size: 12px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+.source-chips { display: flex; gap: 6px; }
+.source-chip {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 10px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: transparent;
+  color: var(--text-secondary); cursor: pointer; font-size: 12px;
+  white-space: nowrap; transition: all 0.15s;
+}
+.source-chip:hover { border-color: var(--border-light); }
+.source-chip.active { color: var(--text-primary); }
+.source-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  flex-shrink: 0; transition: background 0.15s;
+}
+.source-name { font-weight: 600; }
+.source-org { color: var(--text-muted); font-size: 11px; }
+
+/* ── Filter Bar ─────────────────────────── */
+.filter-bar { display: flex; align-items: center; gap: 10px; overflow-x: auto; padding-bottom: 2px; }
+.filter-label { font-size: 12px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+.filter-chips { display: flex; gap: 6px; flex-wrap: nowrap; }
+.filter-chip {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border: 1px solid var(--border);
+  border-radius: 100px; background: transparent;
+  color: var(--text-secondary); cursor: pointer;
+  font-size: 12px; font-weight: 500; white-space: nowrap; transition: all 0.15s;
+}
+.filter-chip:hover { border-color: var(--border-light); background: var(--bg-card); }
+.filter-chip.active { border-color: var(--accent-blue); background: rgba(59,130,246,0.12); color: var(--accent-blue); }
+.filter-chip.active[data-cat="snow"] { border-color: var(--snow); background: rgba(165,216,255,0.1); color: var(--snow); }
+.filter-chip.active[data-cat="rain"] { border-color: var(--rain); background: rgba(77,171,247,0.1); color: var(--rain); }
+.filter-chip.active[data-cat="storm"] { border-color: var(--storm); background: rgba(132,94,247,0.1); color: var(--storm); }
+.filter-chip.active[data-cat="clear"] { border-color: var(--clear); background: rgba(252,196,25,0.1); color: var(--clear); }
+.filter-chip.active[data-cat="cloudy"] { border-color: var(--cloudy); background: rgba(134,142,150,0.1); color: var(--cloudy); }
+.filter-chip.active[data-cat="wind"] { border-color: var(--wind); background: rgba(56,217,169,0.1); color: var(--wind); }
+.filter-chip.active[data-cat="fog"] { border-color: var(--fog); background: rgba(173,181,189,0.1); color: var(--fog); }
+.filter-chip-icon { font-size: 14px; line-height: 1; }
+.filter-chip-text { line-height: 1; }
+
+/* ── Location Card ──────────────────────── */
+.location-card {
+  background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 20px;
+  animation: fadeIn 0.3s ease;
+  border-left: 3px solid var(--card-accent, var(--border));
+}
+.lc-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.lc-header-left { display: flex; align-items: center; gap: 12px; }
+.lc-icon { font-size: 28px; line-height: 1; }
+.lc-city { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+.lc-region { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.lc-header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.lc-action {
+  padding: 4px 8px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: transparent;
+  color: var(--text-muted); cursor: pointer; font-size: 13px;
+  transition: all 0.15s; line-height: 1;
+}
+.lc-action:hover { border-color: var(--border-light); color: var(--text-primary); background: var(--bg-card); }
+
+.agreement-badge { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 100px; white-space: nowrap; }
+.agreement-badge.agree { background: rgba(16,185,129,0.12); color: var(--accent-green); border: 1px solid rgba(16,185,129,0.25); }
+.agreement-badge.mostly { background: rgba(245,158,11,0.12); color: var(--accent-amber); border: 1px solid rgba(245,158,11,0.25); }
+.agreement-badge.disagree { background: rgba(239,68,68,0.12); color: var(--accent-red); border: 1px solid rgba(239,68,68,0.25); }
+
+.temp-range {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; background: var(--bg-card);
+  border-radius: var(--radius-sm); margin-bottom: 14px; font-size: 12px;
+}
+.temp-range-label { color: var(--text-muted); }
+.temp-range-val { color: var(--text-primary); font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+.temp-range-warn { color: var(--accent-amber); font-size: 11px; }
+
+.condition-summary {
+  padding: 10px 12px; background: var(--bg-card);
+  border-radius: var(--radius-sm); margin-bottom: 14px; font-size: 12px;
+}
+.cs-label { color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 6px; }
+.cs-items { display: flex; flex-wrap: wrap; gap: 8px; }
+.cs-item {
+  display: flex; align-items: center; gap: 4px;
+  padding: 3px 8px; background: var(--bg-secondary);
+  border-radius: var(--radius-sm); border: 1px solid var(--border);
+}
+.cs-icon { font-size: 13px; }
+.cs-cat { font-weight: 600; color: var(--text-secondary); text-transform: capitalize; }
+.cs-dash { color: var(--text-muted); }
+.cs-models { color: var(--text-muted); font-size: 11px; }
+
+.lc-sources { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+
+.source-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.source-card:hover {
+  border-color: var(--src-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--src-color) 15%, transparent);
+}
+.source-card-nws { border: 1px solid rgba(14,165,233,0.3); }
+
+.sc-header { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.sc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.sc-model { font-weight: 700; font-size: 13px; }
+.sc-org { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+
+.sc-main { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.sc-condition-icon { font-size: 26px; line-height: 1; }
+.sc-temp {
+  font-size: 32px; font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: -1px;
+}
+.sc-condition { font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; font-weight: 500; }
+
+.sc-details { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+.sc-detail { display: flex; justify-content: space-between; font-size: 11px; animation: fadeIn 0.2s ease; }
+.sc-detail-label { color: var(--text-muted); }
+.sc-detail-val { color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+
+.sc-nws-detail {
+  font-size: 12px; color: var(--text-secondary); line-height: 1.5;
+  padding: 8px; background: rgba(14,165,233,0.06);
+  border-radius: var(--radius-sm); margin-bottom: 8px;
+}
+.sc-nws-label {
+  font-weight: 600; color: #0ea5e9; display: block; margin-bottom: 2px;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.sc-nws-periods { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); animation: fadeIn 0.2s ease; }
+.sc-nws-periods-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px; }
+.sc-nws-period { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 11px; }
+.sc-nws-period-name { font-weight: 600; color: var(--text-secondary); min-width: 80px; }
+.sc-nws-period-temp { font-family: 'JetBrains Mono', monospace; color: var(--text-primary); min-width: 40px; }
+.sc-nws-period-cond { color: var(--text-muted); }
+
+.lc-expand {
+  display: block; width: 100%; margin-top: 12px; padding: 8px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: transparent; color: var(--text-muted);
+  cursor: pointer; font-size: 12px; transition: all 0.15s;
+}
+.lc-expand:hover { background: var(--bg-card); color: var(--text-secondary); }
+
+.lc-loading { display: flex; align-items: center; gap: 10px; padding: 24px 0; color: var(--text-muted); font-size: 13px; }
+.lc-loading-spinner {
+  width: 18px; height: 18px; border: 2px solid var(--border);
+  border-top-color: var(--accent-blue); border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+.lc-error {
+  padding: 12px; background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.2); border-radius: var(--radius-sm);
+  color: var(--accent-red); font-size: 13px;
+}
+.lc-error button {
+  margin-left: 8px; padding: 2px 10px; border: 1px solid var(--accent-red);
+  border-radius: var(--radius-sm); background: transparent;
+  color: var(--accent-red); cursor: pointer; font-size: 12px;
+}
+.lc-empty { padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+/* ── Empty State ────────────────────────── */
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 20px; text-align: center; animation: fadeIn 0.4s ease; }
+.empty-icon { font-size: 64px; margin-bottom: 20px; line-height: 1; }
+.empty-title { font-size: 22px; font-weight: 700; margin-bottom: 10px; }
+.empty-desc { font-size: 14px; color: var(--text-secondary); max-width: 480px; line-height: 1.6; margin-bottom: 28px; }
+.empty-models { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.em-model {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 14px; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 500; color: var(--text-secondary);
+}
+.em-dot { width: 8px; height: 8px; border-radius: 50%; }
+.em-org { font-size: 11px; color: var(--text-muted); }
+
+/* ── Responsive ─────────────────────────── */
+@media (max-width: 640px) {
+  .app-header { padding: 14px 16px 10px; }
+  .brand-title { font-size: 18px; }
+  .app-main { padding: 16px; }
+  .lc-sources { grid-template-columns: 1fr; }
+  .lc-header { flex-direction: column; }
+  .lc-header-right { width: 100%; justify-content: flex-end; }
+  .source-org { display: none; }
+  .header-top { flex-wrap: wrap; gap: 8px; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+/* ═══════════════════════════════════════════════════════════════
+   WEATHER API
+   ═══════════════════════════════════════════════════════════════ */
+
+const WMO_CODES = {
+  0:{label:"Clear sky",cat:"clear"},1:{label:"Mainly clear",cat:"clear"},
+  2:{label:"Partly cloudy",cat:"cloudy"},3:{label:"Overcast",cat:"cloudy"},
+  45:{label:"Fog",cat:"fog"},48:{label:"Depositing rime fog",cat:"fog"},
+  51:{label:"Light drizzle",cat:"rain"},53:{label:"Moderate drizzle",cat:"rain"},
+  55:{label:"Dense drizzle",cat:"rain"},56:{label:"Light freezing drizzle",cat:"rain"},
+  57:{label:"Dense freezing drizzle",cat:"rain"},61:{label:"Slight rain",cat:"rain"},
+  63:{label:"Moderate rain",cat:"rain"},65:{label:"Heavy rain",cat:"rain"},
+  66:{label:"Light freezing rain",cat:"rain"},67:{label:"Heavy freezing rain",cat:"rain"},
+  71:{label:"Slight snow fall",cat:"snow"},73:{label:"Moderate snow fall",cat:"snow"},
+  75:{label:"Heavy snow fall",cat:"snow"},77:{label:"Snow grains",cat:"snow"},
+  80:{label:"Slight rain showers",cat:"rain"},81:{label:"Moderate rain showers",cat:"rain"},
+  82:{label:"Violent rain showers",cat:"rain"},85:{label:"Slight snow showers",cat:"snow"},
+  86:{label:"Heavy snow showers",cat:"snow"},95:{label:"Thunderstorm",cat:"storm"},
+  96:{label:"Thunderstorm w/ slight hail",cat:"storm"},99:{label:"Thunderstorm w/ heavy hail",cat:"storm"},
+};
+
+const decodeWMO = (code) => WMO_CODES[code] || { label: "Unknown", cat: "cloudy" };
+
+const MODELS = [
+  { id:"nws", name:"NWS", org:"National Weather Service (US)", color:"#0ea5e9", type:"direct" },
+  { id:"ecmwf_ifs025", name:"ECMWF", org:"European Centre (EU)", color:"#3b82f6", type:"om" },
+  { id:"gfs_seamless", name:"GFS / NOAA", org:"NOAA Global Forecast (US)", color:"#ef4444", type:"om" },
+  { id:"icon_seamless", name:"ICON / DWD", org:"German Weather Service", color:"#f59e0b", type:"om" },
+  { id:"gem_seamless", name:"GEM / ECCC", org:"Environment Canada", color:"#10b981", type:"om" },
+  { id:"jma_seamless", name:"JMA", org:"Japan Meteorological Agency", color:"#8b5cf6", type:"om" },
+];
+
+const FILTERS = [
+  { key:"all", label:"All", icon:"🌍" },
+  { key:"clear", label:"Clear / Sunny", icon:"☀️" },
+  { key:"cloudy", label:"Cloudy", icon:"☁️" },
+  { key:"rain", label:"Rain", icon:"🌧️" },
+  { key:"snow", label:"Snow / Ice", icon:"❄️" },
+  { key:"storm", label:"Storms", icon:"⛈️" },
+  { key:"wind", label:"Windy", icon:"💨" },
+  { key:"fog", label:"Fog / Mist", icon:"🌫️" },
+];
+
+const catIcon = (c) => ({snow:"❄️",rain:"🌧️",storm:"⛈️",clear:"☀️",cloudy:"☁️",wind:"💨",fog:"🌫️"}[c]||"🌡️");
+const catColor = (c) => ({snow:"#a5d8ff",rain:"#4dabf7",storm:"#845ef7",clear:"#fcc419",cloudy:"#868e96",wind:"#38d9a9",fog:"#adb5bd"}[c]||"#868e96");
+
+async function searchLocations(query) {
+  if (!query || query.trim().length < 2) return [];
+  const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=8&language=en&format=json`);
+  if (!r.ok) throw new Error("Geocoding failed");
+  const d = await r.json();
+  return (d.results||[]).map(r=>({
+    id:r.id, name:r.name, region:r.admin1||"", country:r.country||"",
+    countryCode:r.country_code||"", lat:r.latitude, lon:r.longitude,
+    label:[r.name,r.admin1,r.country_code].filter(Boolean).join(", "),
+  }));
+}
+
+async function fetchOM(lat, lon, modelId) {
+  const p = new URLSearchParams({
+    latitude:lat, longitude:lon,
+    current:"temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,precipitation,cloud_cover,pressure_msl",
+    forecast_days:1, models:modelId,
+    temperature_unit:"fahrenheit", wind_speed_unit:"mph", precipitation_unit:"inch",
+  });
+  const r = await fetch(`https://api.open-meteo.com/v1/forecast?${p}`);
+  if (!r.ok) throw new Error(`${modelId} failed`);
+  return r.json();
+}
+
+function classifyNWS(s) {
+  s = (s||"").toLowerCase();
+  if (s.includes("snow")||s.includes("blizzard")||s.includes("flurr")||s.includes("sleet")||s.includes("ice pellet")||s.includes("freezing")) return "snow";
+  if (s.includes("thunder")||s.includes("tornado")||s.includes("hurricane")||s.includes("severe")) return "storm";
+  if (s.includes("rain")||s.includes("drizzle")||s.includes("shower")) return "rain";
+  if (s.includes("fog")||s.includes("mist")||s.includes("haze")||s.includes("smoke")) return "fog";
+  if (s.includes("wind")||s.includes("breezy")||s.includes("gust")) return "wind";
+  if (s.includes("sunny")||s.includes("clear")||s.includes("fair")) return "clear";
+  if (s.includes("cloud")||s.includes("overcast")||s.includes("partly")) return "cloudy";
+  return "cloudy";
+}
+
+async function fetchNWS(lat, lon) {
+  const ua = { headers: { "User-Agent": "WeatherHub/1.0" } };
+  const pr = await fetch(`https://api.weather.gov/points/${lat.toFixed(4)},${lon.toFixed(4)}`, ua);
+  if (!pr.ok) throw new Error("NWS point lookup failed");
+  const pd = await pr.json();
+  const fUrl = pd.properties?.forecast;
+  const sUrl = pd.properties?.observationStations;
+  if (!fUrl) throw new Error("No NWS forecast");
+
+  let temp=null, wind=null, wDir=null, gusts=null, hum=null, desc="", pres=null;
+  if (sUrl) {
+    try {
+      const sr = await fetch(sUrl, ua);
+      if (sr.ok) {
+        const sd = await sr.json();
+        const sid = sd.features?.[0]?.properties?.stationIdentifier;
+        if (sid) {
+          const or = await fetch(`https://api.weather.gov/stations/${sid}/observations/latest`, ua);
+          if (or.ok) {
+            const op = (await or.json()).properties || {};
+            if (op.temperature?.value!=null) temp = Math.round(op.temperature.value*9/5+32);
+            if (op.windSpeed?.value!=null) wind = Math.round(op.windSpeed.value*0.621371);
+            if (op.windDirection?.value!=null) wDir = op.windDirection.value;
+            if (op.windGust?.value!=null) gusts = Math.round(op.windGust.value*0.621371);
+            if (op.relativeHumidity?.value!=null) hum = Math.round(op.relativeHumidity.value);
+            if (op.barometricPressure?.value!=null) pres = Math.round(op.barometricPressure.value/100);
+            desc = op.textDescription || "";
+          }
+        }
+      }
+    } catch {}
+  }
+
+  const fr = await fetch(fUrl, ua);
+  if (!fr.ok) throw new Error("NWS forecast failed");
+  const fd = await fr.json();
+  const periods = fd.properties?.periods || [];
+  const now = periods[0] || {};
+  const cond = desc || now.shortForecast || "Unknown";
+
+  return {
+    temp: temp ?? now.temperature ?? null,
+    feelsLike: temp ?? now.temperature ?? null,
+    humidity: hum, windSpeed: wind ?? (now.windSpeed ? parseInt(now.windSpeed) : null),
+    windGusts: gusts??0, windDir: wDir??0, precipitation:0, cloudCover:null,
+    pressure: pres, weatherCode:null, condition:cond, category:classifyNWS(cond),
+    detailedForecast: now.detailedForecast||"", nwsPeriods: periods.slice(0,6),
+  };
+}
+
+async function fetchAllWeather(lat, lon, cc) {
+  const isUS = (cc||"").toUpperCase()==="US";
+  const tasks = MODELS.map(async m => {
+    try {
+      if (m.id==="nws") {
+        if (!isUS) return null;
+        return { model:m, current:await fetchNWS(lat,lon), source:"nws" };
+      }
+      const d = await fetchOM(lat,lon,m.id);
+      const raw = d.current||{};
+      const dec = decodeWMO(raw.weather_code);
+      let cat = dec.cat;
+      if (raw.wind_speed_10m>25 && cat==="clear") cat="wind";
+      return {
+        model:m, source:"om",
+        current: {
+          temp:Math.round(raw.temperature_2m), feelsLike:Math.round(raw.apparent_temperature),
+          humidity:raw.relative_humidity_2m, windSpeed:Math.round(raw.wind_speed_10m),
+          windGusts:Math.round(raw.wind_gusts_10m||0), windDir:raw.wind_direction_10m,
+          precipitation:raw.precipitation, cloudCover:raw.cloud_cover,
+          pressure:raw.pressure_msl, condition:dec.label, category:cat,
+        },
+      };
+    } catch(e) { console.warn(m.name, e.message); return null; }
+  });
+  return (await Promise.all(tasks)).filter(Boolean);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   COMPONENTS
+   ═══════════════════════════════════════════════════════════════ */
+
+function SearchBar({ onSelect }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [focusIdx, setFocusIdx] = useState(-1);
+  const inputRef = useRef(null);
+  const debRef = useRef(null);
+
+  const doSearch = useCallback(async q => {
+    if (q.trim().length<2) { setResults([]); setOpen(false); return; }
+    setLoading(true);
+    try { const l = await searchLocations(q); setResults(l); setOpen(l.length>0); setFocusIdx(-1); }
+    catch { setResults([]); }
+    finally { setLoading(false); }
+  }, []);
+
+  const handleChange = e => {
+    setQuery(e.target.value);
+    clearTimeout(debRef.current);
+    debRef.current = setTimeout(() => doSearch(e.target.value), 300);
+  };
+
+  const handleSelect = loc => { onSelect(loc); setQuery(""); setResults([]); setOpen(false); };
+
+  const handleKey = e => {
+    if (!open) return;
+    if (e.key==="ArrowDown") { e.preventDefault(); setFocusIdx(i=>Math.min(i+1,results.length-1)); }
+    else if (e.key==="ArrowUp") { e.preventDefault(); setFocusIdx(i=>Math.max(i-1,0)); }
+    else if (e.key==="Enter" && focusIdx>=0) { e.preventDefault(); handleSelect(results[focusIdx]); }
+    else if (e.key==="Escape") setOpen(false);
+  };
+
+  useEffect(() => {
+    const h = e => { if (!e.target.closest(".search-bar")) setOpen(false); };
+    document.addEventListener("click", h);
+    return () => document.removeEventListener("click", h);
+  }, []);
+
+  return (
+    <div className="search-bar">
+      <div className="search-input-wrap">
+        <svg className="search-icon" viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+          <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" />
+        </svg>
+        <input ref={inputRef} type="text" className="search-input"
+          placeholder="Search a city — e.g. Ellicott City, Denver, Tokyo…"
+          value={query} onChange={handleChange} onKeyDown={handleKey}
+          onFocus={()=>results.length>0 && setOpen(true)} />
+        {loading && <span className="search-spinner" />}
+      </div>
+      {open && (
+        <ul className="search-dropdown">
+          {results.map((loc,i) => (
+            <li key={loc.id} className={`search-option ${i===focusIdx?"focused":""}`}
+              onMouseEnter={()=>setFocusIdx(i)} onClick={()=>handleSelect(loc)}>
+              <span className="search-option-name">{loc.name}</span>
+              <span className="search-option-detail">{[loc.region,loc.country].filter(Boolean).join(", ")}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function SourceToggle({ enabled, onToggle }) {
+  return (
+    <div className="source-toggle">
+      <span className="source-label">Sources:</span>
+      <div className="source-chips">
+        {MODELS.map(m => {
+          const on = enabled.includes(m.id);
+          return (
+            <button key={m.id}
+              className={`source-chip ${on?"active":""}`}
+              style={{ borderColor:on?m.color:undefined, background:on?`${m.color}18`:undefined }}
+              onClick={()=>onToggle(m.id)} title={m.org}>
+              <span className="source-dot" style={{background:on?m.color:"var(--text-muted)"}} />
+              <span className="source-name">{m.name}</span>
+              <span className="source-org">{m.org}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function FilterBar({ active, onChange }) {
+  return (
+    <div className="filter-bar">
+      <span className="filter-label">Filter by condition:</span>
+      <div className="filter-chips">
+        {FILTERS.map(f => (
+          <button key={f.key} className={`filter-chip ${active===f.key?"active":""}`}
+            data-cat={f.key} onClick={()=>onChange(f.key)}>
+            <span className="filter-chip-icon">{f.icon}</span>
+            <span className="filter-chip-text">{f.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function windDir(deg) {
+  if (deg==null) return "—";
+  const d=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+  return d[Math.round(deg/22.5)%16]||"—";
+}
+
+function LocationCard({ entry, enabledSources, convertTemp, tempUnit, onRemove, onRefresh }) {
+  const { location, results, loading, error } = entry;
+  const [expanded, setExpanded] = useState(false);
+  const visible = results.filter(r => enabledSources.includes(r.model.id));
+
+  const catCounts = {};
+  visible.forEach(r => { const c=r.current.category; catCounts[c]=(catCounts[c]||0)+1; });
+  const dominant = Object.entries(catCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||"cloudy";
+
+  // Agreement
+  const cats = visible.map(r=>r.current.category);
+  const unique = [...new Set(cats)];
+  let badge = null;
+  if (visible.length >= 2) {
+    if (unique.length===1) badge = <span className="agreement-badge agree">✓ All sources agree</span>;
+    else if (unique.length<=2 && visible.length>=3) badge = <span className="agreement-badge mostly">~ Mostly agree</span>;
+    else badge = <span className="agreement-badge disagree">⚡ Sources disagree</span>;
+  }
+
+  // Temp spread
+  const temps = visible.map(r=>r.current.temp).filter(t=>t!=null);
+  const tMin = Math.min(...temps), tMax = Math.max(...temps), spread = tMax-tMin;
+
+  // Who says what
+  const groups = {};
+  visible.forEach(r => { const c=r.current.category; if(!groups[c]) groups[c]=[]; groups[c].push(r.model.name); });
+
+  return (
+    <div className="location-card" style={{"--card-accent":catColor(dominant)}}>
+      <div className="lc-header">
+        <div className="lc-header-left">
+          <span className="lc-icon">{catIcon(dominant)}</span>
+          <div>
+            <h2 className="lc-city">{location.name}</h2>
+            <p className="lc-region">{[location.region,location.country].filter(Boolean).join(", ")}</p>
+          </div>
+        </div>
+        <div className="lc-header-right">
+          {badge}
+          <button className="lc-action" onClick={onRefresh} title="Refresh">🔄</button>
+          <button className="lc-action" onClick={onRemove} title="Remove">✕</button>
+        </div>
+      </div>
+
+      {loading && (
+        <div className="lc-loading">
+          <span className="lc-loading-spinner" />
+          Fetching from {location.countryCode==="US"?"6":"5"} weather sources for {location.name}…
+        </div>
+      )}
+
+      {error && <div className="lc-error">⚠️ {error} <button onClick={onRefresh}>Retry</button></div>}
+
+      {!loading && !error && visible.length > 0 && (<>
+        {temps.length > 0 && (
+          <div className="temp-range">
+            <span className="temp-range-label">Temp spread:</span>
+            <span className="temp-range-val">{convertTemp(tMin)}° — {convertTemp(tMax)}°{tempUnit}</span>
+            {spread>5 && <span className="temp-range-warn">({spread>10?"⚠️ high":"moderate"} disagreement)</span>}
+          </div>
+        )}
+
+        {Object.keys(groups).length > 1 && (
+          <div className="condition-summary">
+            <span className="cs-label">Who says what:</span>
+            <div className="cs-items">
+              {Object.entries(groups).map(([cat,models])=>(
+                <div key={cat} className="cs-item">
+                  <span className="cs-icon">{catIcon(cat)}</span>
+                  <span className="cs-cat">{cat}</span>
+                  <span className="cs-dash">→</span>
+                  <span className="cs-models">{models.join(", ")}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="lc-sources">
+          {visible.map(r => (
+            <div key={r.model.id} className={`source-card ${r.source==="nws"?"source-card-nws":""}`}
+              style={{"--src-color":r.model.color}}>
+              <div className="sc-header">
+                <span className="sc-dot" style={{background:r.model.color}} />
+                <span className="sc-model">{r.model.name}</span>
+                <span className="sc-org">{r.model.org}</span>
+              </div>
+              <div className="sc-main">
+                <span className="sc-condition-icon">{catIcon(r.current.category)}</span>
+                <span className="sc-temp">{r.current.temp!=null?`${convertTemp(r.current.temp)}°`:"—"}</span>
+              </div>
+              <div className="sc-condition">{r.current.condition}</div>
+
+              {r.source==="nws" && r.current.detailedForecast && (
+                <div className="sc-nws-detail">
+                  <span className="sc-nws-label">NWS Forecast:</span>
+                  {r.current.detailedForecast}
+                </div>
+              )}
+
+              <div className="sc-details">
+                <div className="sc-detail"><span className="sc-detail-label">Feels like</span>
+                  <span className="sc-detail-val">{r.current.feelsLike!=null?`${convertTemp(r.current.feelsLike)}°${tempUnit}`:"—"}</span></div>
+                <div className="sc-detail"><span className="sc-detail-label">Wind</span>
+                  <span className="sc-detail-val">{r.current.windSpeed!=null?`${r.current.windSpeed} mph ${windDir(r.current.windDir)}`:"—"}</span></div>
+                <div className="sc-detail"><span className="sc-detail-label">Humidity</span>
+                  <span className="sc-detail-val">{r.current.humidity!=null?`${r.current.humidity}%`:"—"}</span></div>
+                {expanded && (<>
+                  <div className="sc-detail"><span className="sc-detail-label">Gusts</span>
+                    <span className="sc-detail-val">{r.current.windGusts?`${r.current.windGusts} mph`:"—"}</span></div>
+                  <div className="sc-detail"><span className="sc-detail-label">Precip</span>
+                    <span className="sc-detail-val">{r.current.precipitation!=null?`${r.current.precipitation}"`:"—"}</span></div>
+                  <div className="sc-detail"><span className="sc-detail-label">Cloud</span>
+                    <span className="sc-detail-val">{r.current.cloudCover!=null?`${r.current.cloudCover}%`:"—"}</span></div>
+                  <div className="sc-detail"><span className="sc-detail-label">Pressure</span>
+                    <span className="sc-detail-val">{r.current.pressure?`${Math.round(r.current.pressure)} hPa`:"—"}</span></div>
+                </>)}
+              </div>
+
+              {expanded && r.source==="nws" && r.current.nwsPeriods?.length>1 && (
+                <div className="sc-nws-periods">
+                  <span className="sc-nws-periods-title">Upcoming:</span>
+                  {r.current.nwsPeriods.slice(1).map((p,i)=>(
+                    <div key={i} className="sc-nws-period">
+                      <span className="sc-nws-period-name">{p.name}</span>
+                      <span className="sc-nws-period-temp">{p.temperature}°{p.temperatureUnit}</span>
+                      <span className="sc-nws-period-cond">{p.shortForecast}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <button className="lc-expand" onClick={()=>setExpanded(e=>!e)}>
+          {expanded?"Show less ▲":"Show more details ▼"}
+        </button>
+      </>)}
+
+      {!loading && !error && visible.length===0 && (
+        <div className="lc-empty">No results match the current filter / source selection.</div>
+      )}
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="empty-state">
+      <div className="empty-icon">⛅</div>
+      <h2 className="empty-title">Search for a city to get started</h2>
+      <p className="empty-desc">
+        Compare weather forecasts from <strong>6 different weather sources</strong> side-by-side
+        for any location. See where they agree, where they disagree, and filter by condition type.
+        For US cities, includes the <strong>National Weather Service</strong> with detailed forecasts.
+      </p>
+      <div className="empty-models">
+        <div className="em-model"><span className="em-dot" style={{background:"#0ea5e9"}} /> NWS <span className="em-org">National Weather Service</span></div>
+        <div className="em-model"><span className="em-dot" style={{background:"#3b82f6"}} /> ECMWF <span className="em-org">EU</span></div>
+        <div className="em-model"><span className="em-dot" style={{background:"#ef4444"}} /> GFS / NOAA <span className="em-org">US</span></div>
+        <div className="em-model"><span className="em-dot" style={{background:"#f59e0b"}} /> ICON / DWD <span className="em-org">Germany</span></div>
+        <div className="em-model"><span className="em-dot" style={{background:"#10b981"}} /> GEM / ECCC <span className="em-org">Canada</span></div>
+        <div className="em-model"><span className="em-dot" style={{background:"#8b5cf6"}} /> JMA <span className="em-org">Japan</span></div>
+      </div>
+    </div>
+  );
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   APP
+   ═══════════════════════════════════════════════════════════════ */
+
+function App() {
+  const [locations, setLocations] = useState([]);
+  const [activeFilter, setActiveFilter] = useState("all");
+  const [enabledSources, setEnabledSources] = useState(MODELS.map(m=>m.id));
+  const [tempUnit, setTempUnit] = useState("F");
+
+  const addLocation = useCallback(async loc => {
+    if (locations.some(l=>l.location.id===loc.id)) return;
+    setLocations(prev=>[{location:loc, results:[], loading:true, error:null}, ...prev]);
+    try {
+      const results = await fetchAllWeather(loc.lat, loc.lon, loc.countryCode);
+      setLocations(prev=>prev.map(l=>l.location.id===loc.id?{...l,results,loading:false}:l));
+    } catch(err) {
+      setLocations(prev=>prev.map(l=>l.location.id===loc.id?{...l,loading:false,error:err.message}:l));
+    }
+  }, [locations]);
+
+  const removeLocation = useCallback(id => {
+    setLocations(prev=>prev.filter(l=>l.location.id!==id));
+  }, []);
+
+  const refreshLocation = useCallback(async loc => {
+    setLocations(prev=>prev.map(l=>l.location.id===loc.id?{...l,loading:true,error:null}:l));
+    try {
+      const results = await fetchAllWeather(loc.lat, loc.lon, loc.countryCode);
+      setLocations(prev=>prev.map(l=>l.location.id===loc.id?{...l,results,loading:false}:l));
+    } catch(err) {
+      setLocations(prev=>prev.map(l=>l.location.id===loc.id?{...l,loading:false,error:err.message}:l));
+    }
+  }, []);
+
+  const toggleSource = useCallback(id => {
+    setEnabledSources(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
+  }, []);
+
+  const convertTemp = f => tempUnit==="C" ? Math.round((f-32)*5/9) : f;
+
+  const filtered = locations.map(entry => {
+    if (activeFilter==="all") return entry;
+    return {...entry, results: entry.results.filter(r=>r.current.category===activeFilter)};
+  });
+
+  return (
+    <div className="app">
+      <header className="app-header">
+        <div className="header-top">
+          <div className="brand">
+            <span className="brand-icon">⛅</span>
+            <div>
+              <h1 className="brand-title">Weather Hub</h1>
+              <p className="brand-sub">Compare forecasts across weather sources</p>
+            </div>
+          </div>
+          <div className="header-controls">
+            <button className={`unit-btn ${tempUnit==="F"?"active":""}`} onClick={()=>setTempUnit("F")}>°F</button>
+            <button className={`unit-btn ${tempUnit==="C"?"active":""}`} onClick={()=>setTempUnit("C")}>°C</button>
+          </div>
+        </div>
+        <SearchBar onSelect={addLocation} />
+        <SourceToggle enabled={enabledSources} onToggle={toggleSource} />
+        <FilterBar active={activeFilter} onChange={setActiveFilter} />
+      </header>
+
+      <main className="app-main">
+        {locations.length===0 ? <EmptyState /> : (
+          <div className="locations-grid">
+            {filtered.map(entry=>(
+              <LocationCard key={entry.location.id} entry={entry}
+                enabledSources={enabledSources} convertTemp={convertTemp} tempUnit={tempUnit}
+                onRemove={()=>removeLocation(entry.location.id)}
+                onRefresh={()=>refreshLocation(entry.location)} />
+            ))}
+          </div>
+        )}
+      </main>
+
+      <footer className="app-footer">
+        <p>
+          Data from <a href="https://open-meteo.com/" target="_blank">Open-Meteo</a> (ECMWF, GFS, ICON, GEM, JMA)
+          &amp; <a href="https://www.weather.gov/" target="_blank">NWS / weather.gov</a>. Free &amp; open-source — no API keys needed.
+        </p>
+      </footer>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
